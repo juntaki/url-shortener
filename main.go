@@ -74,7 +74,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		id = randomID(3)
 	}
-	url := r.URL.Query().Get("url")
 	su := &ShortURL{ID: id, URL: url}
 	_, err := g.Put(su)
 	if err != nil {
