@@ -1,7 +1,10 @@
-FROM scratch
+FROM golang:latest
+ADD . /go/src/url-shortener
+WORKDIR /go/src/url-shortener
+RUN go get -v
+RUN go install url-shortener
 
-ENV PORT 8000
-EXPOSE $PORT
-
-COPY url-shortener /
-CMD ["/url-shortener"]
+FROM golang:latest
+COPY --from=0 /go/bin/url-shortener .
+ENV PORT 8080
+CMD ["./url-shortener"]

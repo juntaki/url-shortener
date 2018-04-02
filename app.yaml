@@ -1,0 +1,27 @@
+runtime: go
+api_version: go1.8
+
+handlers:
+- url: /.*
+  script: _go_app
+  secure: always
+
+skip_files:
+- ^(.*/)?app\.yaml
+- ^(.*/)?app\.yml
+- ^(.*/)?#.*#
+- ^(.*/)?.*~
+- ^(.*/)?.*\.py[co]
+- ^(.*/)?.*/RCS/.*
+- ^(.*/)?\..*
+- ^(.*/)?tests$
+- ^(.*/)?test$
+- ^test/(.*/)?
+- ^README\..*
+- \.gitignore
+- ^\.git/.*
+- ^node_modules/(.*/)?
+- generated
+- src
+- webpack.config.js
+- ^(.*/)?.*\.json

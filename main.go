@@ -17,11 +17,18 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/", handler)
+	r.Get("/admin", adminHandler)
 
-	http.ListenAndServe(":8000", r)
+	http.ListenAndServe(":8080", r)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hoge"))
+	w.WriteHeader(http.StatusOK)
+	return
+}
+
+func adminHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("hoge"))
 	w.WriteHeader(http.StatusOK)
 	return
