@@ -56,8 +56,14 @@ func randomID(n int) string {
 }
 
 func adminHandler(w http.ResponseWriter, r *http.Request) {
-	g := goon.NewGoon(r)
+	url := r.URL.Query().Get("url")
+	if url == "" {
+		w.Write([]byte("Add query ?url="))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
+	g := goon.NewGoon(r)
 	id := randomID(3)
 	for {
 		su := &ShortURL{ID: id}
@@ -76,7 +82,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("http://l.juntaki.com/" + id))
+	w.Write([]byte("http://s.juntaki.com/" + id))
 	w.WriteHeader(http.StatusOK)
 	return
 }
