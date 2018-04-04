@@ -3,12 +3,15 @@ package urlshortener
 import (
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mjibson/goon"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/urlfetch"
 )
 
 var letters = []rune("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz")
@@ -23,7 +26,10 @@ func init() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Get("/", adminHandler)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
+	r.Post("/", adminHandler)
 	r.Get("/{ShortURLID}", handler)
 
 	http.Handle("/", r)
@@ -56,10 +62,20 @@ func randomID(n int) string {
 }
 
 func adminHandler(w http.ResponseWriter, r *http.Request) {
-	url := r.URL.Query().Get("url")
-	if url == "" {
-		w.Write([]byte("Add query ?url="))
-		w.WriteHeader(http.StatusOK)
+	response := r.FormValue("g-recaptcha-response")
+
+	client := urlfetch.Client(r.Context())
+	result, _ := client.PostForm("https://www.google.com/recaptcha/api/siteverify",
+		url.Values{
+			"secret":   {os.Getenv("RECAPTCHA_SECRET")},
+			"remoteip": {r.RemoteAddr},
+			"response": {response},
+		})
+
+	u := r.FormValue("url")
+	if _, err := url.ParseRequestURI(u); err != nil {
+		w.Write([]byte("Bad URL"))
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -74,14 +90,14 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		id = randomID(3)
 	}
-	su := &ShortURL{ID: id, URL: url}
+	su := &ShortURL{ID: id, URL: u}
 	_, err := g.Put(su)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte("http://s.juntaki.com/" + id))
+	w.Write([]byte(u + "-> https://s.juntaki.com/" + id))
 	w.WriteHeader(http.StatusOK)
 	return
 }
