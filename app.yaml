@@ -9,6 +9,10 @@ handlers:
 includes:
 - secret.yml
 
+env_variables:
+  BASE_URL: "https://s.juntaki.com"
+  RECAPTCHA_SITE_KEY: "6Lc48lAUAAAAAFehXaHNp0Ys-lS1iUfNtUXd_-eR"
+
 skip_files:
 - ^(.*/)?app\.yaml
 - ^(.*/)?app\.yml

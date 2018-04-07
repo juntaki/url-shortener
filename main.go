@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"encoding/base64"
@@ -24,8 +25,16 @@ import (
 )
 
 var letters = []rune("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz")
+var baseURL string
+var siteKey string
+var indexTemplate *template.Template
+var statsTemplate *template.Template
 
 func init() {
+	baseURL = os.Getenv("BASE_URL")
+	siteKey = os.Getenv("RECAPTCHA_SITE_KEY")
+	statsTemplate = template.Must(template.ParseFiles("stats.html"))
+	indexTemplate = template.Must(template.ParseFiles("index.html"))
 	rand.Seed(time.Now().UnixNano())
 
 	r := chi.NewRouter()
@@ -35,13 +44,21 @@ func init() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
-	})
+	r.Get("/", indexHandler)
 	r.Post("/", adminHandler)
 	r.Get("/{ShortURLID}", handler)
 
 	http.Handle("/", r)
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	err := indexTemplate.ExecuteTemplate(w, "index.html", siteKey)
+	if err != nil {
+		log.Errorf(appengine.NewContext(r), err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	return
 }
 
 type ShortURL struct {
@@ -61,27 +78,32 @@ func (s *ShortURL) Base64QRCode() template.URL {
 	return template.URL(result)
 }
 
+func (s *ShortURL) ShortURL() template.URL {
+	return template.URL(path.Join(baseURL, s.ID))
+}
+
+func (s *ShortURL) statsHandler(w http.ResponseWriter, r *http.Request) {
+	err := statsTemplate.ExecuteTemplate(w, "stats.html", s)
+	if err != nil {
+		log.Errorf(appengine.NewContext(r), err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	return
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	g := goon.NewGoon(r)
 
 	id := chi.URLParam(r, "ShortURLID")
 	su := &ShortURL{ID: id}
 	if err := g.Get(su); err != nil {
-		w.Write([]byte("404"))
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	noRedirect := r.URL.Query().Get("noredirect")
-
 	if noRedirect == "true" {
-		t := template.Must(template.ParseFiles("stats.html"))
-
-		err := t.ExecuteTemplate(w, "stats.html", su)
-		if err != nil {
-			log.Errorf(appengine.NewContext(r), err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		su.statsHandler(w, r)
 		return
 	}
 	http.Redirect(w, r, su.URL, http.StatusFound)
@@ -160,5 +182,5 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "https://s.juntaki.com/"+id+"?noredirect=true", http.StatusFound)
+	http.Redirect(w, r, string(su.ShortURL())+"?noredirect=true", http.StatusFound)
 }
