@@ -13,17 +13,12 @@
       form.submit();
     }
 
-    function validate(event) {
-      event.preventDefault();
+    function validate() {
       var form = document.getElementById("url-shortener");
       if (form.reportValidity()) {
         grecaptcha.execute();
       }
-    }
-
-    function onload() {
-      var element = document.getElementById('submit-button');
-      element.onclick = validate;
+      return false
     }
   </script>
   <script src='https://www.google.com/recaptcha/api.js' async defer></script>
@@ -32,14 +27,14 @@
 <body>
   <div class="container" style="height: 100vh">
     <div class="row valign-wrapper" style="height: 100%; margin-bottom: 0px;">
-      <form id="url-shortener" class="col s12" action="/" method="post" autocomplete="off">
+      <form id="url-shortener" onsubmit="return validate()" class="col s12" action="/" method="post" autocomplete="off">
         <div class="row">
           <div class="row">
             <div class="g-recaptcha" data-sitekey="{{.}}" data-callback="onSubmit" data-size="invisible"></div>
             <input name="url" type="url" value="" placeholder="https://long-long-url" required/>
           </div>
           <div class="row center-align">
-            <button id="submit-button" type="button" class="waves-effect waves-light btn-large"> Shorten URL
+            <button id="submit-button" class="waves-effect waves-light btn-large"> Shorten URL
               <i class="material-icons right">send</i>
             </button>
           </div>
