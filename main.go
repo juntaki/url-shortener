@@ -25,13 +25,17 @@ import (
 )
 
 var letters = []rune("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz")
-var baseURL string
+var baseURL *url.URL
 var siteKey string
 var indexTemplate *template.Template
 var statsTemplate *template.Template
 
 func init() {
-	baseURL = os.Getenv("BASE_URL")
+	var err error
+	baseURL, err = url.Parse(os.Getenv("BASE_URL"))
+	if err != nil {
+		panic("base URL is invalid")
+	}
 	siteKey = os.Getenv("RECAPTCHA_SITE_KEY")
 	statsTemplate = template.Must(template.ParseFiles("stats.html"))
 	indexTemplate = template.Must(template.ParseFiles("index.html"))
@@ -68,7 +72,7 @@ type ShortURL struct {
 
 func (s *ShortURL) Base64QRCode() template.URL {
 	var png []byte
-	png, err := qrcode.Encode(s.URL, qrcode.Low, 256)
+	png, err := qrcode.Encode(string(s.ShortURL()), qrcode.Low, 256)
 	if err != nil {
 		return "data:image/png;base64,"
 	}
@@ -79,7 +83,9 @@ func (s *ShortURL) Base64QRCode() template.URL {
 }
 
 func (s *ShortURL) ShortURL() template.URL {
-	return template.URL(path.Join(baseURL, s.ID))
+	result := *baseURL
+	result.Path = path.Join(baseURL.Path, s.ID)
+	return template.URL(result.String())
 }
 
 func (s *ShortURL) statsHandler(w http.ResponseWriter, r *http.Request) {
