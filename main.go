@@ -1,6 +1,10 @@
 package urlshortener
 
 import (
+	"context"
+	"encoding/json"
+	"html/template"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -10,7 +14,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mjibson/goon"
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
 )
 
@@ -50,6 +56,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	noRedirect := r.URL.Query().Get("noredirect")
+
+	if noRedirect == "true" {
+		t := template.Must(template.ParseFiles("stats.html"))
+		err := t.ExecuteTemplate(w, "stats.html", su)
+		if err != nil {
+			log.Errorf(appengine.NewContext(r), err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		return
+	}
 	http.Redirect(w, r, su.URL, http.StatusFound)
 }
 
@@ -61,16 +79,45 @@ func randomID(n int) string {
 	return string(b)
 }
 
-func adminHandler(w http.ResponseWriter, r *http.Request) {
-	response := r.FormValue("g-recaptcha-response")
+type RecaptchaResponse struct {
+	Success     bool      `json:"success"`
+	ChallengeTS time.Time `json:"challenge_ts"`
+	Hostname    string    `json:"hostname"`
+	ErrorCodes  []string  `json:"error-codes"`
+}
 
-	client := urlfetch.Client(r.Context())
-	result, _ := client.PostForm("https://www.google.com/recaptcha/api/siteverify",
+func validate(ctx context.Context, r *http.Request) bool {
+	response := r.FormValue("g-recaptcha-response")
+	client := urlfetch.Client(ctx)
+	result, err := client.PostForm("https://www.google.com/recaptcha/api/siteverify",
 		url.Values{
 			"secret":   {os.Getenv("RECAPTCHA_SECRET")},
 			"remoteip": {r.RemoteAddr},
 			"response": {response},
 		})
+	if err != nil {
+		return false
+	}
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		return false
+	}
+
+	rr := RecaptchaResponse{}
+	err = json.Unmarshal(body, &rr)
+	if err != nil {
+		return false
+	}
+	return rr.Success
+}
+
+func adminHandler(w http.ResponseWriter, r *http.Request) {
+	validated := validate(appengine.NewContext(r), r)
+	if !validated {
+		w.Write([]byte("Recaptcha validation failed"))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	u := r.FormValue("url")
 	if _, err := url.ParseRequestURI(u); err != nil {
@@ -97,7 +144,5 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(u + "-> https://s.juntaki.com/" + id))
-	w.WriteHeader(http.StatusOK)
-	return
+	http.Redirect(w, r, "https://s.juntaki.com/"+id+"?noredirect=true", http.StatusFound)
 }

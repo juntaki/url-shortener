@@ -10,18 +10,22 @@
   <script src='https://www.google.com/recaptcha/api.js'></script>
   <script>
       function onSubmit(token) {
-        document.getElementById("url-shortener").submit();
+        var form = document.getElementById("url-shortener");
+        if (form.checkValidity()){
+          form.submit();
+        } else {
+          M.toast({html: 'Please input valid URL'})
+        }
       }
   </script>
 </head>
-
 <body>
   <div class="container" style="height: 100vh">
-    <div class="row valign-wrapper" style="height: 100%">
+    <div class="row valign-wrapper" style="height: 90%">
       <form id="url-shortener" class="col s12" action="/" method="post">
         <div class="row">
           <div class="col s9">
-            <input name="url" type="url" value="" />
+            <input name="url" type="url" value="" required/>
           </div>
           <div class="col s3">
             <button data-sitekey="6Lc48lAUAAAAAFehXaHNp0Ys-lS1iUfNtUXd_-eR" data-callback="onSubmit" class="g-recaptcha btn-large waves-effect waves-light"
