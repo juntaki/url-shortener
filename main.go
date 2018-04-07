@@ -11,9 +11,12 @@ import (
 	"os"
 	"time"
 
+	"encoding/base64"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mjibson/goon"
+	qrcode "github.com/skip2/go-qrcode"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
@@ -46,6 +49,18 @@ type ShortURL struct {
 	URL string
 }
 
+func (s *ShortURL) Base64QRCode() template.URL {
+	var png []byte
+	png, err := qrcode.Encode(s.URL, qrcode.Low, 256)
+	if err != nil {
+		return "data:image/png;base64,"
+	}
+
+	result := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+
+	return template.URL(result)
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	g := goon.NewGoon(r)
 
@@ -60,6 +75,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	if noRedirect == "true" {
 		t := template.Must(template.ParseFiles("stats.html"))
+
 		err := t.ExecuteTemplate(w, "stats.html", su)
 		if err != nil {
 			log.Errorf(appengine.NewContext(r), err.Error())
