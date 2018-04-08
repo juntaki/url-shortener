@@ -27,22 +27,28 @@
 <body>
   <div class="container" style="height: 100vh">
     <div class="row valign-wrapper" style="height: 100%; margin-bottom: 0px;">
-      <form id="url-shortener" onsubmit="return validate()" class="col s12" action="/" method="post" autocomplete="off">
-        <div class="row">
-          <div class="row">
-            <div class="g-recaptcha" data-sitekey="{{.}}" data-callback="onSubmit" data-size="invisible"></div>
-            <input name="url" type="url" value="" placeholder="https://long-long-url" required/>
-          </div>
-          <div class="row center-align">
-            <button id="submit-button" class="waves-effect waves-light btn-large"> Shorten URL
-              <i class="material-icons right">send</i>
-            </button>
-          </div>
+      <div class="card col s12">
+        <div class="card-content black-text">
+          <form id="url-shortener" onsubmit="return validate()" class="col s12" action="/" method="post" autocomplete="off">
+            <div class="row">
+              <div class="row">
+                <div class="g-recaptcha" data-sitekey="{{.}}" data-callback="onSubmit" data-size="invisible"></div>
+                <input name="url" type="url" value="" placeholder="https://long-long-url" required/>
+              </div>
+              <div class="row center-align">
+                <button id="submit-button" class="waves-effect waves-light btn-large"> Shorten URL
+                  <i class="material-icons right">send</i>
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   </div>
-  <script>onload();</script>
+  <script>
+    onload();
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
 </body>
 
