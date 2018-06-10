@@ -50,7 +50,7 @@ func init() {
 
 	r.Get("/", indexHandler)
 	r.Post("/", adminHandler)
-	r.Post("/delete", deleteHandler)
+	r.Get("/delete", deleteHandler)
 	r.Get("/{ShortURLID}", handler)
 
 	http.Handle("/", r)
