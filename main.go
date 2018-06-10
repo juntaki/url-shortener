@@ -50,6 +50,7 @@ func init() {
 
 	r.Get("/", indexHandler)
 	r.Post("/", adminHandler)
+	r.Post("/delete", deleteHandler)
 	r.Get("/{ShortURLID}", handler)
 
 	http.Handle("/", r)
@@ -125,6 +126,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, su.URL, http.StatusFound)
 }
 
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	if !user.IsAdmin(ctx) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	g := goon.NewGoon(r)
+
+	q := datastore.NewQuery("ShortURL").Filter("IsAdmin =", false)
+	su := []*ShortURL{}
+	_, err := g.GetAll(q, &su)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	keys := make([]*datastore.Key, 0, len(su))
+	for _, v := range su {
+		keys = append(keys, g.Key(v))
+	}
+
+	g.DeleteMulti(keys)
+}
+
 func randomID(n int) string {
 	b := make([]rune, n)
 	for i := range b {
@@ -198,9 +225,16 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		id = randomID(3)
 	}
-	su := &ShortURL{ID: id, URL: u, IsAdmin: currentUser.Admin, User: currentUser.Email, CreateAt: time.Now()}
+	su := &ShortURL{
+		ID:       id,
+		URL:      u,
+		IsAdmin:  currentUser.Admin,
+		User:     currentUser.Email,
+		CreateAt: time.Now(),
+	}
 	_, err := g.Put(su)
 	if err != nil {
+		log.Errorf(ctx, "Failed to Put URL %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

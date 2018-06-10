@@ -1,0 +1,4 @@
+cron:
+- description: hourly delete not admin URL
+  url: /delete
+  schedule: every 1 hours
