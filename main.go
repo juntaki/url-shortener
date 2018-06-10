@@ -22,6 +22,7 @@ import (
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
+	"google.golang.org/appengine/user"
 )
 
 var letters = []rune("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz")
@@ -45,7 +46,6 @@ func init() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/", indexHandler)
@@ -56,6 +56,13 @@ func init() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+	currentUser := user.Current(ctx)
+	if currentUser == nil {
+		url, _ := user.LoginURL(ctx, "/")
+		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	}
+
 	err := indexTemplate.ExecuteTemplate(w, "index.html", siteKey)
 	if err != nil {
 		log.Errorf(appengine.NewContext(r), err.Error())
@@ -66,8 +73,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type ShortURL struct {
-	ID  string `datastore:"-" goon:"id"`
-	URL string
+	ID       string `datastore:"-" goon:"id"`
+	URL      string
+	IsAdmin  bool
+	User     string
+	CreateAt time.Time
 }
 
 func (s *ShortURL) Base64QRCode() template.URL {
@@ -163,6 +173,13 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := appengine.NewContext(r)
+	currentUser := user.Current(ctx)
+	if currentUser == nil {
+		url, _ := user.LoginURL(ctx, "/")
+		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	}
+
 	u := r.FormValue("url")
 	if _, err := url.ParseRequestURI(u); err != nil {
 		w.Write([]byte("Bad URL"))
@@ -181,7 +198,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		id = randomID(3)
 	}
-	su := &ShortURL{ID: id, URL: u}
+	su := &ShortURL{ID: id, URL: u, IsAdmin: currentUser.Admin, User: currentUser.Email, CreateAt: time.Now()}
 	_, err := g.Put(su)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
