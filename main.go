@@ -127,13 +127,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if !user.IsAdmin(ctx) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
 	g := goon.NewGoon(r)
 
 	q := datastore.NewQuery("ShortURL").Filter("IsAdmin =", false)

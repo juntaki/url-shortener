@@ -1,7 +1,12 @@
 runtime: go
-api_version: go1.8
+api_version: go1.9
 
 handlers:
+- url: /delete
+  script: _go_app
+  secure: always
+  login: admin
+
 - url: /.*
   script: _go_app
   secure: always
