@@ -1,6 +1,6 @@
 # url-shortener
 
-Shorten URL and generage QR code.
+Shorten URL and generate QR code.
 
 ![url-shortener](https://user-images.githubusercontent.com/5100568/38465564-40d7b79e-3b58-11e8-978f-304193d4f5c3.gif)
 
